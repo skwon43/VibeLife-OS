@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import Week from './tabs/Week'
 import Goals from './tabs/Goals'
@@ -8,7 +8,6 @@ import Ideas from './tabs/Ideas'
 import Skills from './tabs/Skills'
 import Career from './tabs/Career'
 
-// 하단 네비게이션 탭 정의
 const TABS = [
   { id: 'week', label: '주간', icon: '📅' },
   { id: 'goals', label: 'Goals', icon: '🎯' },
@@ -19,6 +18,22 @@ const TABS = [
   { id: 'career', label: 'Career', icon: '💼' },
 ]
 
+// 저장 상태 표시
+function SaveStatus({ status }) {
+  if (status === 'idle') return null
+  const config = {
+    saving: { text: '저장 중...', color: '#9999b3' },
+    saved:  { text: '저장됨 ✓',  color: '#1D9E75' },
+    error:  { text: '저장 실패 ✗', color: '#D85A30' },
+  }
+  const c = config[status]
+  return (
+    <span style={{ fontSize: '11px', color: c.color, transition: 'all 0.3s' }}>
+      {c.text}
+    </span>
+  )
+}
+
 export default function Main({ session }) {
   const [activeTab, setActiveTab] = useState('week')
   const [data, setData] = useState({
@@ -27,73 +42,89 @@ export default function Main({ session }) {
     ideas: [], vocab: []
   })
   const [loading, setLoading] = useState(true)
+  const [saveStatus, setSaveStatus] = useState('idle')
+  const saveTimerRef = useRef(null)
+  const pendingDataRef = useRef(null)
 
   useEffect(() => {
-  loadData()
+    loadData()
 
-  // 실시간 변경사항 감지
-  const channel = supabase
-    .channel('vibelife_changes')
-    .on('postgres_changes', {
-      event: 'UPDATE',
-      schema: 'public',
-      table: 'vibelife_data',
-      filter: `user_id=eq.${session.user.id}`
-    }, (payload) => {
-      setData(payload.new.data)
-    })
-    .subscribe()
+    const channel = supabase
+      .channel('vibelife_changes')
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'vibelife_data',
+        filter: `user_id=eq.${session.user.id}`
+      }, (payload) => {
+        setData(payload.new.data)
+      })
+      .subscribe()
 
-  return () => supabase.removeChannel(channel)
-}, [])
+    return () => supabase.removeChannel(channel)
+  }, [])
 
   async function loadData() {
-  const { data: row, error } = await supabase
-    .from('vibelife_data')
-    .select('data')
-    .eq('user_id', session.user.id)
-    .maybeSingle()  // single() 대신 maybeSingle() 사용
+    const { data: row } = await supabase
+      .from('vibelife_data')
+      .select('data')
+      .eq('user_id', session.user.id)
+      .maybeSingle()
 
-  if (row?.data) setData(row.data)
-  setLoading(false)
-}
+    if (row?.data) setData(row.data)
+    setLoading(false)
+  }
 
-  // 데이터 저장 함수 - 모든 탭에서 공유
-  async function saveData(newData) {
-  const updated = { ...data }
-  
-  Object.keys(newData).forEach(key => {
-    if (
-      typeof newData[key] === 'object' &&
-      !Array.isArray(newData[key]) &&
-      newData[key] !== null &&
-      typeof data[key] === 'object' &&
-      !Array.isArray(data[key])
-    ) {
-      updated[key] = { ...data[key], ...newData[key] }
+  // 실제 DB 저장
+  async function flushSave(updated) {
+    setSaveStatus('saving')
+    const { error } = await supabase
+      .from('vibelife_data')
+      .upsert({
+        user_id: session.user.id,
+        data: updated,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'user_id' })
+
+    if (error) {
+      console.error('저장 실패:', error)
+      setSaveStatus('error')
+      // 3초 후 retry
+      setTimeout(() => flushSave(updated), 3000)
     } else {
-      updated[key] = newData[key]
+      setSaveStatus('saved')
+      // 2초 후 idle
+      setTimeout(() => setSaveStatus('idle'), 2000)
     }
-  })
+  }
 
-  setData(updated)
+  // debounce 저장 - UI는 즉시 반응, DB는 0.8초 후
+  const saveData = useCallback((newData) => {
+    setData(prev => {
+      const updated = { ...prev }
+      Object.keys(newData).forEach(key => {
+        if (
+          typeof newData[key] === 'object' &&
+          !Array.isArray(newData[key]) &&
+          newData[key] !== null &&
+          typeof prev[key] === 'object' &&
+          !Array.isArray(prev[key])
+        ) {
+          updated[key] = { ...prev[key], ...newData[key] }
+        } else {
+          updated[key] = newData[key]
+        }
+      })
+      pendingDataRef.current = updated
+      return updated
+    })
 
-  console.log('저장 시도:', updated)  // ← 추가
-
-  const { error } = await supabase
-  .from('vibelife_data')
-  .upsert({
-    user_id: session.user.id,
-    data: updated,
-    updated_at: new Date()
-  }, { onConflict: 'user_id' })
-
-if (error) {
-  console.log("🔥 저장 실패:", error.message, error.details)
-} else {
-  console.log("✅ 저장 성공")
-}
-}
+    // 기존 타이머 취소 후 새 타이머
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+    saveTimerRef.current = setTimeout(() => {
+      if (pendingDataRef.current) flushSave(pendingDataRef.current)
+    }, 800)
+  }, [session.user.id])
 
   if (loading) return (
     <div style={{
@@ -105,47 +136,57 @@ if (error) {
     </div>
   )
 
-  // 현재 활성 탭에 맞는 컴포넌트 렌더링
- function renderTab() {
-  const props = { data, saveData, session }
-  switch (activeTab) {
-    case 'week':    return <Week {...props} />
-    case 'goals':   return <Goals {...props} />
-    case 'habits':  return <Habits {...props} />
-    case 'know':    return <Knowledge {...props} />
-    case 'ideas':   return <Ideas {...props} />
-    case 'skills':  return <Skills {...props} />
-    case 'career':  return <Career {...props} />
-    default:        return <Week {...props} />
+  function renderTab() {
+    const props = { data, saveData, session }
+    switch (activeTab) {
+      case 'week':    return <Week {...props} />
+      case 'goals':   return <Goals {...props} />
+      case 'habits':  return <Habits {...props} />
+      case 'know':    return <Knowledge {...props} />
+      case 'ideas':   return <Ideas {...props} />
+      case 'skills':  return <Skills {...props} />
+      case 'career':  return <Career {...props} />
+      default:        return <Week {...props} />
+    }
   }
-}
 
   return (
     <div style={{ maxWidth: '480px', margin: '0 auto', minHeight: '100vh', background: '#F7F6FB', position: 'relative' }}>
-      
+
       {/* 상단 헤더 */}
       <div style={{
-        padding: '1.1rem 1rem 0.6rem',
+        padding: '0.5rem 0.5rem env(safe-area-inset-bottom, 0.9rem)',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         background: '#F7F6FB', position: 'sticky', top: 0, zIndex: 40
       }}>
         <h1 style={{ fontSize: '22px', fontWeight: '600', color: '#1a1a2e', letterSpacing: '-0.5px' }}>
           Vibe<span style={{ color: '#7F77DD' }}>Life</span>
         </h1>
-        <button
-          onClick={() => supabase.auth.signOut()}
-          style={{
-            fontSize: '12px', color: '#9999b3', background: '#fff',
-            padding: '5px 12px', borderRadius: '20px',
-            border: '1px solid #E8E7F2', cursor: 'pointer'
-          }}
-        >
-          로그아웃
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <SaveStatus status={saveStatus} />
+          <button
+            onClick={async () => {
+              await supabase.auth.signOut()
+              window.location.reload()
+            }}
+            style={{
+              fontSize: '12px', color: '#9999b3', background: '#fff',
+              padding: '5px 12px', borderRadius: '20px',
+              border: '1px solid #E8E7F2', cursor: 'pointer'
+            }}
+          >
+            로그아웃
+          </button>
+        </div>
       </div>
 
       {/* 탭 컨텐츠 */}
-      <div style={{ padding: '1.25rem 1rem 5.5rem' }}>
+      <div style={{ 
+        padding: '1.25rem 1rem 5.5rem',
+        overflowY: 'auto',
+        WebkitOverflowScrolling: 'touch',
+        minHeight: 'calc(100vh - 60px)',
+      }}>
         {renderTab()}
       </div>
 

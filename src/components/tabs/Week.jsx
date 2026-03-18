@@ -11,12 +11,11 @@ export default function Week({ data, saveData }) {
   const [showTaskInput, setShowTaskInput] = useState(false)
   const [journalInput, setJournalInput] = useState('')
 
-  // selDate 바뀔 때마다 journal, input 초기화
   useEffect(() => {
-  setJournalInput('')
-  setTaskInput('')
-  setShowTaskInput(false)
-}, [selDate])
+    setJournalInput('')
+    setTaskInput('')
+    setShowTaskInput(false)
+  }, [selDate])
 
   function toStr(d) {
     return d.getFullYear() + '-' +
@@ -25,11 +24,11 @@ export default function Week({ data, saveData }) {
   }
 
   function getWeekDates(offset) {
-    const s = new Date(now)
-    s.setDate(s.getDate() - s.getDay() + offset * 7)
+    const base = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    base.setDate(base.getDate() - base.getDay() + offset * 7)
     return Array.from({ length: 7 }, (_, i) => {
-      const d = new Date(s)
-      d.setDate(s.getDate() + i)
+      const d = new Date(base)
+      d.setDate(base.getDate() + i)
       return d
     })
   }
@@ -38,6 +37,11 @@ export default function Week({ data, saveData }) {
   const tasks = data.tasks?.[selDate] || []
   const habits = data.habits || []
   const doneCount = tasks.filter(t => t.done).length
+
+  function weeklyPct(done = []) {
+    const checked = weekDates.filter(d => (done || []).includes(toStr(d))).length
+    return Math.round((checked / 7) * 100)
+  }
 
   function addTask() {
     if (!taskInput.trim()) return
@@ -62,13 +66,13 @@ export default function Week({ data, saveData }) {
   }
 
   function saveJournal() {
-  if (!journalInput.trim()) return
-  const existing = data.journal?.[selDate] || []
-  const entries = Array.isArray(existing) ? existing : [{ text: existing, ts: 0 }]
-  const newEntries = [...entries, { text: journalInput, ts: Date.now() }]
-  saveData({ journal: { ...data.journal, [selDate]: newEntries } })
-  setJournalInput('')
-}
+    if (!journalInput.trim()) return
+    const existing = data.journal?.[selDate] || []
+    const entries = Array.isArray(existing) ? existing : existing ? [{ text: existing, ts: 0 }] : []
+    const newEntries = [...entries, { text: journalInput, ts: Date.now() }]
+    saveData({ journal: { ...data.journal, [selDate]: newEntries } })
+    setJournalInput('')
+  }
 
   function toggleHabit(hi) {
     const updated = habits.map((h, i) => {
@@ -80,17 +84,6 @@ export default function Week({ data, saveData }) {
       return { ...h, done }
     })
     saveData({ habits: updated })
-  }
-
-  function streak(done = [], ref) {
-    let s = 0
-    const d = new Date(ref + 'T00:00:00')
-    while (true) {
-      const ds = toStr(d)
-      if (done.includes(ds)) { s++; d.setDate(d.getDate() - 1) }
-      else break
-    }
-    return s
   }
 
   const selD = new Date(selDate + 'T00:00:00')
@@ -128,7 +121,12 @@ export default function Week({ data, saveData }) {
           const isSel = ds === selDate
           const hasTasks = (data.tasks?.[ds] || []).length > 0
           const hasHab = habits.some(h => (h.done || []).includes(ds))
-          const hasJ = !!data.journal?.[ds]
+          const hasJ = (() => {
+          const j = data.journal?.[ds]
+          if (!j) return false
+          if (Array.isArray(j)) return j.length > 0
+          return !!j
+        })()
           return (
             <div key={i} onClick={() => setSelDate(ds)} style={{
               display: 'flex', flexDirection: 'column', alignItems: 'center',
@@ -209,31 +207,37 @@ export default function Week({ data, saveData }) {
         {/* Habits */}
         <div style={{ padding: '0.85rem 1rem', borderBottom: '1px solid #E8E7F2' }}>
           <span style={{ fontSize: '11px', fontWeight: '500', color: '#9999b3', letterSpacing: '0.06em' }}>HABITS</span>
-          {habits.length ? habits.map((h, hi) => (
-            <div key={hi} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '7px 0', borderBottom: hi < habits.length - 1 ? '1px solid #E8E7F2' : 'none' }}>
-              <span style={{ flex: 1, fontSize: '14px', color: '#1a1a2e' }}>{h.name}</span>
-              <span style={{ fontSize: '11px', color: '#085041', background: '#E1F5EE', padding: '3px 8px', borderRadius: '10px' }}>
-                {streak(h.done, selDate)}일
-              </span>
-              <button onClick={() => toggleHabit(hi)} style={{
-                width: '38px', height: '22px', borderRadius: '11px', border: 'none', cursor: 'pointer',
-                background: (h.done || []).includes(selDate) ? '#1D9E75' : '#D0CEEA',
-                position: 'relative', transition: 'background 0.2s'
-              }}>
-                <div style={{
-                  position: 'absolute', width: '18px', height: '18px', borderRadius: '50%',
-                  background: '#fff', top: '2px',
-                  left: (h.done || []).includes(selDate) ? '18px' : '2px',
-                  transition: 'left 0.2s'
-                }} />
-              </button>
-            </div>
-          )) : <p style={{ fontSize: '13px', color: '#9999b3', padding: '4px 0 0' }}>Habits 탭에서 추가해봐</p>}
+          {habits.length ? habits.map((h, hi) => {
+            const pct = weeklyPct(h.done)
+            const pctColor = pct >= 80 ? '#085041' : pct >= 50 ? '#633806' : '#3C3489'
+            const pctBg = pct >= 80 ? '#E1F5EE' : pct >= 50 ? '#FAEEDA' : '#EEEDFE'
+            const isOn = (h.done || []).includes(selDate)
+            return (
+              <div key={hi} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '7px 0', borderBottom: hi < habits.length - 1 ? '1px solid #E8E7F2' : 'none' }}>
+                <span style={{ flex: 1, fontSize: '14px', color: '#1a1a2e' }}>{h.name}</span>
+                <span style={{ fontSize: '11px', fontWeight: '500', padding: '3px 8px', borderRadius: '10px', background: pctBg, color: pctColor }}>
+                  {pct}%
+                </span>
+                <button onClick={() => toggleHabit(hi)} style={{
+                  width: '38px', height: '22px', borderRadius: '11px', border: 'none', cursor: 'pointer',
+                  background: isOn ? '#1D9E75' : '#D0CEEA',
+                  position: 'relative', transition: 'background 0.2s', flexShrink: 0
+                }}>
+                  <div style={{
+                    position: 'absolute', width: '18px', height: '18px', borderRadius: '50%',
+                    background: '#fff', top: '2px',
+                    left: isOn ? '18px' : '2px',
+                    transition: 'left 0.2s'
+                  }} />
+                </button>
+              </div>
+            )
+          }) : <p style={{ fontSize: '13px', color: '#9999b3', padding: '4px 0 0' }}>Habits 탭에서 추가해봐</p>}
         </div>
 
         {/* Journal */}
         <div style={{ padding: '0.85rem 1rem' }}>
-        <span style={{ fontSize: '11px', fontWeight: '500', color: '#9999b3', letterSpacing: '0.06em' }}>JOURNAL</span>
+          <span style={{ fontSize: '11px', fontWeight: '500', color: '#9999b3', letterSpacing: '0.06em' }}>JOURNAL</span>
 
           {/* 저장된 기록들 */}
           {(() => {
@@ -286,7 +290,7 @@ export default function Week({ data, saveData }) {
               fontWeight: '500', cursor: 'pointer'
             }}>저장</button>
           </div>
-        </div>       
+        </div>
       </div>
     </div>
   )

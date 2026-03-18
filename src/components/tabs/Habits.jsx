@@ -13,25 +13,29 @@ export default function Habits({ data, saveData }) {
       String(d.getDate()).padStart(2, '0')
   }
 
-  function getWeekDates() {
-    const s = new Date(now)
-    s.setDate(s.getDate() - s.getDay())
-    return Array.from({ length: 7 }, (_, i) => {
-      const d = new Date(s)
-      d.setDate(s.getDate() + i)
-      return d
-    })
-  }
+ function getWeekDates() {
+  const s = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  s.setDate(s.getDate() - s.getDay())
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(s)
+    d.setDate(s.getDate() + i)
+    return d
+  })
+}
 
-  function streak(done = [], ref) {
-    let s = 0
-    const d = new Date(ref + 'T00:00:00')
-    while (true) {
-      const ds = toStr(d)
-      if (done.includes(ds)) { s++; d.setDate(d.getDate() - 1) }
-      else break
-    }
-    return s
+  // 이번 주 달성률 계산 (오늘까지만 기준)
+  function weeklyPct(done = []) {
+    const weekDates = getWeekDates()
+    const todayStr = toStr(now)
+
+    // 오늘까지 지난 날 수 (오늘 포함)
+    const passedDays = weekDates.filter(d => toStr(d) <= todayStr).length
+    if (passedDays === 0) return 0
+
+    // 이번 주에 체크한 날 수
+    const checkedDays = weekDates.filter(d => done.includes(toStr(d))).length
+
+    return Math.round((checkedDays / 7) * 100) // 7일 기준
   }
 
   function addHabit() {
@@ -79,19 +83,35 @@ export default function Habits({ data, saveData }) {
       )}
 
       {habits.map((h, hi) => {
-        const st = streak(h.done, todayStr)
+        const pct = weeklyPct(h.done)
+        const checkedThisWeek = weekDates.filter(d => (h.done || []).includes(toStr(d))).length
+
+        // 퍼센트에 따라 색상 변화
+        const pctColor = pct >= 80 ? '#1D9E75' : pct >= 50 ? '#BA7517' : '#7F77DD'
+        const pctBg = pct >= 80 ? '#E1F5EE' : pct >= 50 ? '#FAEEDA' : '#EEEDFE'
+
         return (
           <div key={hi} style={{ background: '#fff', borderRadius: '12px', border: '1px solid #E8E7F2', padding: '0.9rem 1rem', marginBottom: '0.65rem' }}>
-            
+
             {/* 헤더 */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
               <span style={{ fontSize: '15px', fontWeight: '500', color: '#1a1a2e' }}>{h.name}</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '11px', color: '#085041', background: '#E1F5EE', padding: '3px 9px', borderRadius: '10px', fontWeight: '500' }}>
-                  {st}일 연속
+                {/* 주간 달성률 */}
+                <span style={{ fontSize: '11px', fontWeight: '500', padding: '3px 9px', borderRadius: '10px', background: pctBg, color: pctColor }}>
+                  이번 주 {checkedThisWeek}/7 ({pct}%)
                 </span>
                 <button onClick={() => delHabit(hi)} style={{ width: '26px', height: '26px', borderRadius: '50%', border: '1px solid #E8E7F2', background: 'transparent', color: '#9999b3', fontSize: '15px', cursor: 'pointer' }}>×</button>
               </div>
+            </div>
+
+            {/* 프로그레스 바 */}
+            <div style={{ height: '5px', background: '#F7F6FB', borderRadius: '3px', overflow: 'hidden', border: '1px solid #E8E7F2', marginBottom: '10px' }}>
+              <div style={{
+                height: '100%', width: `${pct}%`,
+                background: pct >= 80 ? '#1D9E75' : pct >= 50 ? '#BA7517' : '#7F77DD',
+                borderRadius: '3px', transition: 'width 0.4s'
+              }} />
             </div>
 
             {/* 주간 체크 */}
@@ -100,16 +120,22 @@ export default function Habits({ data, saveData }) {
                 const ds = toStr(d)
                 const on = (h.done || []).includes(ds)
                 const isT = ds === todayStr
+                const isFuture = ds > todayStr
+
                 return (
-                  <div key={di} onClick={() => toggleDay(hi, ds)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                  <div key={di} onClick={() => !isFuture && toggleDay(hi, ds)} style={{
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
+                    cursor: isFuture ? 'default' : 'pointer'
+                  }}>
                     <span style={{ fontSize: '10px', color: '#9999b3', fontWeight: '500' }}>{DAYS[di]}</span>
                     <div style={{
                       width: '100%', aspectRatio: '1', borderRadius: '8px',
                       border: isT && !on ? '1.5px solid #7F77DD' : '1.5px solid #E8E7F2',
-                      background: on ? '#1D9E75' : 'transparent',
+                      background: on ? (pct >= 80 ? '#1D9E75' : pct >= 50 ? '#BA7517' : '#7F77DD') : isFuture ? '#F7F6FB' : 'transparent',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       fontSize: '11px', fontWeight: '500',
-                      color: on ? '#fff' : '#9999b3',
+                      color: on ? '#fff' : isFuture ? '#E8E7F2' : '#9999b3',
+                      opacity: isFuture ? 0.4 : 1,
                       transition: 'all 0.18s'
                     }}>
                       {on ? '✓' : d.getDate()}
