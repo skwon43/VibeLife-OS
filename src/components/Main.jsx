@@ -43,24 +43,18 @@ export default function Main({ session }) {
     setLoading(false)
   }
 
-async function saveData(newData) {
-  const updated = { ...data, ...newData }
-  setData(updated)
-
-  const { error } = await supabase
-    .from('vibelife_data')
-    .upsert({
-      user_id: session.user.id,
-      data: updated,
-      updated_at: new Date()
-    }, { onConflict: 'user_id' })
-
-  if (error) {
-    console.log("🔥 ERROR:", error)
-  } else {
-    console.log("✅ SAVED")
+  // 데이터 저장 함수 - 모든 탭에서 공유
+  async function saveData(newData) {
+    const updated = { ...data, ...newData }
+    setData(updated)
+    await supabase
+      .from('vibelife_data')
+      .upsert({
+        user_id: session.user.id,
+        data: updated,
+        updated_at: new Date()
+      }, { onConflict: 'user_id' })
   }
-}
 
   if (loading) return (
     <div style={{
@@ -71,7 +65,7 @@ async function saveData(newData) {
       불러오는 중...
     </div>
   )
-
+  console.log("🔥🔥🔥 TEST CHANGE")
   // 현재 활성 탭에 맞는 컴포넌트 렌더링
  function renderTab() {
   const props = { data, saveData, session }
