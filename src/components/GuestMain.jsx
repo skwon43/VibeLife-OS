@@ -6,6 +6,7 @@ import Knowledge from './tabs/Knowledge'
 import Ideas from './tabs/Ideas'
 import Skills from './tabs/Skills'
 import Career from './tabs/Career'
+import { ONBOARDING_DATA } from '../lib/defaultData'
 
 const GUEST_KEY = 'vibelife_guest_data'
 
@@ -31,13 +32,19 @@ export default function GuestMain({ onLogin }) {
 
   // localStorage에서 불러오기
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(GUEST_KEY)
-      if (saved) setData(JSON.parse(saved))
-    } catch (e) {
-      console.error('불러오기 실패:', e)
+  try {
+    const saved = localStorage.getItem(GUEST_KEY)
+    if (saved) {
+      setData(JSON.parse(saved))
+    } else {
+      // 신규 게스트 → 예시 데이터
+      setData(ONBOARDING_DATA)
+      localStorage.setItem(GUEST_KEY, JSON.stringify(ONBOARDING_DATA))
     }
-  }, [])
+  } catch (e) {
+    console.error('불러오기 실패:', e)
+  }
+}, [])
 
   // localStorage에 저장
   function saveData(newData) {
@@ -113,16 +120,41 @@ export default function GuestMain({ onLogin }) {
         </div>
       </div>
 
-      {/* 게스트 안내 배너 */}
-      <div style={{
-        margin: '0 1rem 0.75rem',
-        padding: '10px 14px',
-        background: '#FAEEDA', borderRadius: '10px',
-        border: '1px solid #F5C4B3',
-        fontSize: '12px', color: '#633806', lineHeight: '1.5'
-      }}>
-        💡 지금 이 기기에만 저장돼. 로그인하면 모든 기기에서 쓸 수 있어!
-      </div>
+      {/* 배너 - 신규/기존 게스트 구분 */}
+      {data._isOnboarding ? (
+        <div style={{
+          margin: '0 1rem 0.75rem',
+          padding: '10px 14px',
+          background: '#EEEDFE', borderRadius: '10px',
+          border: '1px solid #D0CEEA',
+          fontSize: '13px', color: '#3C3489',
+          lineHeight: '1.5',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px'
+        }}>
+          <span>👋 환영해! 예시 데이터야 — 로그인하면 모든 기기에서 쓸 수 있어</span>
+          <button
+            onClick={() => saveData({ _isOnboarding: false })}
+            style={{
+              fontSize: '12px', color: '#7F77DD', background: 'none',
+              border: '1px solid #D0CEEA', borderRadius: '20px',
+              padding: '3px 10px', cursor: 'pointer', whiteSpace: 'nowrap',
+              fontFamily: 'sans-serif', flexShrink: 0
+            }}
+          >
+            이해했어 ✓
+          </button>
+        </div>
+      ) : (
+        <div style={{
+          margin: '0 1rem 0.75rem',
+          padding: '10px 14px',
+          background: '#FAEEDA', borderRadius: '10px',
+          border: '1px solid #F5C4B3',
+          fontSize: '12px', color: '#633806', lineHeight: '1.5'
+        }}>
+          💡 지금 이 기기에만 저장돼. 로그인하면 모든 기기에서 쓸 수 있어!
+        </div>
+      )}
 
       {/* 탭 컨텐츠 */}
       <div style={{

@@ -7,6 +7,7 @@ import Knowledge from './tabs/Knowledge'
 import Ideas from './tabs/Ideas'
 import Skills from './tabs/Skills'
 import Career from './tabs/Career'
+import { ONBOARDING_DATA } from '../lib/defaultData'
 
 const TABS = [
   { id: 'week', label: '주간', icon: '📅' },
@@ -65,15 +66,27 @@ export default function Main({ session }) {
   }, [])
 
   async function loadData() {
-    const { data: row } = await supabase
-      .from('vibelife_data')
-      .select('data')
-      .eq('user_id', session.user.id)
-      .maybeSingle()
+  const { data: row } = await supabase
+    .from('vibelife_data')
+    .select('data')
+    .eq('user_id', session.user.id)
+    .maybeSingle()
 
-    if (row?.data) setData(row.data)
-    setLoading(false)
+  if (row?.data) {
+    setData(row.data)
+  } else {
+    // 신규 유저 → 예시 데이터 세팅
+    setData(ONBOARDING_DATA)
+    await supabase
+      .from('vibelife_data')
+      .upsert({
+        user_id: session.user.id,
+        data: ONBOARDING_DATA,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'user_id' })
   }
+  setLoading(false)
+}
 
   // 실제 DB 저장
   async function flushSave(updated) {
@@ -179,7 +192,31 @@ export default function Main({ session }) {
           </button>
         </div>
       </div>
-
+      {/* 온보딩 배너 */}
+        {data._isOnboarding && (
+          <div style={{
+            margin: '0 0 0.75rem',
+            padding: '10px 14px',
+            background: '#EEEDFE', borderRadius: '10px',
+            border: '1px solid #D0CEEA',
+            fontSize: '13px', color: '#3C3489',
+            lineHeight: '1.5',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px'
+          }}>
+            <span>👋 환영해! 예시 데이터야 — 둘러보고 지워도 돼</span>
+            <button
+              onClick={() => saveData({ _isOnboarding: false })}
+              style={{
+                fontSize: '12px', color: '#7F77DD', background: 'none',
+                border: '1px solid #D0CEEA', borderRadius: '20px',
+                padding: '3px 10px', cursor: 'pointer', whiteSpace: 'nowrap',
+                fontFamily: 'sans-serif'
+              }}
+            >
+              이해했어 ✓
+            </button>
+          </div>
+        )}       
       {/* 탭 컨텐츠 */}
       <div style={{ 
         padding: '1.25rem 1rem 5.5rem',
