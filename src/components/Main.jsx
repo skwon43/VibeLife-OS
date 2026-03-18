@@ -65,7 +65,7 @@ export default function Main({ session }) {
       불러오는 중...
     </div>
   )
-  console.log("🔥🔥🔥 TEST CHANGE")
+
   // 현재 활성 탭에 맞는 컴포넌트 렌더링
  function renderTab() {
   const props = { data, saveData, session }
