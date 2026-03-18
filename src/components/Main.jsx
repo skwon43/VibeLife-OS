@@ -43,18 +43,24 @@ export default function Main({ session }) {
     setLoading(false)
   }
 
-  // 데이터 저장 함수 - 모든 탭에서 공유
-  async function saveData(newData) {
-    const updated = { ...data, ...newData }
-    setData(updated)
-    await supabase
-      .from('vibelife_data')
-      .upsert({
-        user_id: session.user.id,
-        data: updated,
-        updated_at: new Date()
-      }, { onConflict: 'user_id' })
+async function saveData(newData) {
+  const updated = { ...data, ...newData }
+  setData(updated)
+
+  const { error } = await supabase
+    .from('vibelife_data')
+    .upsert({
+      user_id: session.user.id,
+      data: updated,
+      updated_at: new Date()
+    }, { onConflict: 'user_id' })
+
+  if (error) {
+    console.log("🔥 ERROR:", error)
+  } else {
+    console.log("✅ SAVED")
   }
+}
 
   if (loading) return (
     <div style={{
