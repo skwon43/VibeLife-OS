@@ -29,32 +29,71 @@ export default function Main({ session }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    loadData()
-  }, [])
+  loadData()
+
+  // 실시간 변경사항 감지
+  const channel = supabase
+    .channel('vibelife_changes')
+    .on('postgres_changes', {
+      event: 'UPDATE',
+      schema: 'public',
+      table: 'vibelife_data',
+      filter: `user_id=eq.${session.user.id}`
+    }, (payload) => {
+      setData(payload.new.data)
+    })
+    .subscribe()
+
+  return () => supabase.removeChannel(channel)
+}, [])
 
   async function loadData() {
-    const { data: row } = await supabase
-      .from('vibelife_data')
-      .select('data')
-      .eq('user_id', session.user.id)
-      .single()
+  const { data: row, error } = await supabase
+    .from('vibelife_data')
+    .select('data')
+    .eq('user_id', session.user.id)
+    .maybeSingle()  // single() 대신 maybeSingle() 사용
 
-    if (row) setData(row.data)
-    setLoading(false)
-  }
+  if (row?.data) setData(row.data)
+  setLoading(false)
+}
 
   // 데이터 저장 함수 - 모든 탭에서 공유
   async function saveData(newData) {
-    const updated = { ...data, ...newData }
-    setData(updated)
-    await supabase
-      .from('vibelife_data')
-      .upsert({
-        user_id: session.user.id,
-        data: updated,
-        updated_at: new Date()
-      }, { onConflict: 'user_id' })
-  }
+  const updated = { ...data }
+  
+  Object.keys(newData).forEach(key => {
+    if (
+      typeof newData[key] === 'object' &&
+      !Array.isArray(newData[key]) &&
+      newData[key] !== null &&
+      typeof data[key] === 'object' &&
+      !Array.isArray(data[key])
+    ) {
+      updated[key] = { ...data[key], ...newData[key] }
+    } else {
+      updated[key] = newData[key]
+    }
+  })
+
+  setData(updated)
+
+  console.log('저장 시도:', updated)  // ← 추가
+
+  const { error } = await supabase
+  .from('vibelife_data')
+  .upsert({
+    user_id: session.user.id,
+    data: updated,
+    updated_at: new Date()
+  }, { onConflict: 'user_id' })
+
+if (error) {
+  console.log("🔥 저장 실패:", error.message, error.details)
+} else {
+  console.log("✅ 저장 성공")
+}
+}
 
   if (loading) return (
     <div style={{
