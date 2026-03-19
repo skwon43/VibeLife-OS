@@ -111,16 +111,27 @@ export default function Ideas({ data, saveData }) {
         return (
           <div key={fi} style={{ background: '#fff', borderRadius: '12px', border: '1px solid #E8E7F2', padding: '0.85rem 1rem', marginBottom: '0.6rem' }}>
             {/* 인라인 텍스트 수정 */}
-            <textarea
-              value={idea.text}
-              onChange={e => updateIdea(i, e.target.value)}
-              style={{
-                width: '100%', border: 'none', background: 'transparent',
-                fontSize: '14px', color: '#1a1a2e', lineHeight: '1.7',
-                resize: 'none', outline: 'none', fontFamily: 'sans-serif',
-                padding: 0, marginBottom: '0.6rem', minHeight: '40px'
-              }}
-            />
+              <textarea
+                value={idea.text}
+                onChange={e => {
+                  updateIdea(i, e.target.value)
+                  e.target.style.height = 'auto'
+                  e.target.style.height = e.target.scrollHeight + 'px'
+                }}
+                ref={el => {
+                  if (el) {
+                    el.style.height = 'auto'
+                    el.style.height = el.scrollHeight + 'px'
+                  }
+                }}
+                style={{
+                  width: '100%', border: 'none', background: 'transparent',
+                  fontSize: '14px', color: '#1a1a2e', lineHeight: '1.7',
+                  resize: 'none', outline: 'none', fontFamily: 'sans-serif',
+                  padding: 0, marginBottom: '0.6rem', minHeight: '40px',
+                  overflow: 'hidden'
+                }}
+/>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px' }}>
               {/* 태그 수정 */}
               <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
