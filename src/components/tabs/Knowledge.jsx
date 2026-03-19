@@ -371,11 +371,12 @@ export default function Knowledge({ data, saveData }) {
               placeholder="개념 이름 (예: 퀵소트)"
               style={{ padding: '10px 14px', border: '1.5px solid #E8E7F2', borderRadius: '8px', fontSize: '14px', outline: 'none', background: '#F7F6FB' }}
             />
-            <AutoTextarea
-              value={c.body || ''}
-              onChange={e => updateConcept(ci, 'body', e.target.value)}
-              placeholder="핵심 내용..."
-              style={{ width: '100%', fontSize: '13px', color: '#555572', lineHeight: '1.7', marginBottom: '8px', border: 'none', background: 'transparent', outline: 'none', fontFamily: 'sans-serif', padding: 0 }}
+            <textarea
+              value={conceptForm.body}
+              onChange={e => setConceptForm(prev => ({ ...prev, body: e.target.value }))}
+              placeholder="핵심 내용, 공식, 설명..."
+              rows={3}
+              style={{ padding: '10px 14px', border: '1.5px solid #E8E7F2', borderRadius: '8px', fontSize: '13px', outline: 'none', background: '#F7F6FB', resize: 'none', fontFamily: 'sans-serif' }}
             />
             <button onClick={addConcept} style={{ padding: '10px', borderRadius: '8px', border: 'none', background: '#7F77DD', color: '#fff', fontSize: '14px', fontWeight: '500', cursor: 'pointer' }}>추가</button>
           </div>
