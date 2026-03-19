@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import AutoTextarea from '../lib/AutoTextarea'
+
 
 const STATUS_KR = { planned: '예정', ongoing: '진행 중', done: '완료' }
 const TYPE_LABELS = { intern: '인턴', project: '프로젝트', cert: '자격증', job: '취업' }
@@ -67,7 +69,7 @@ export default function Career({ data, saveData }) {
                   }}
                 />
                 {/* 메모 인라인 수정 */}
-                <textarea
+                <AutoTextarea
                   value={c.desc || ''}
                   onChange={e => updateCareer(i, 'desc', e.target.value)}
                   placeholder="메모, 준비사항..."
@@ -75,8 +77,7 @@ export default function Career({ data, saveData }) {
                   style={{
                     width: '100%', fontSize: '12px', color: '#555572',
                     border: 'none', background: 'transparent', outline: 'none',
-                    fontFamily: 'sans-serif', padding: 0, resize: 'none',
-                    lineHeight: '1.5', boxSizing: 'border-box'
+                    fontFamily: 'sans-serif', padding: 0, lineHeight: '1.5', boxSizing: 'border-box'
                   }}
                 />
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px', flexWrap: 'wrap' }}>

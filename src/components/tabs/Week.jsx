@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
+import AutoTextarea from '../lib/AutoTextarea'
 
 const DAYS = ['일', '월', '화', '수', '목', '금', '토']
 
@@ -263,7 +265,7 @@ export default function Week({ data, saveData }) {
                 background: '#F7F6FB', borderRadius: '8px', padding: '10px 12px',
                 marginTop: '0.6rem', border: '1px solid #E8E7F2', position: 'relative'
               }}>
-                <textarea
+                <AutoTextarea
                   value={entry.text}
                   onChange={e => {
                     const ex = data.journal?.[selDate] || []
@@ -275,10 +277,9 @@ export default function Week({ data, saveData }) {
                   style={{
                     width: '100%', border: 'none', background: 'transparent',
                     fontSize: '14px', color: '#1a1a2e', lineHeight: '1.7',
-                    resize: 'none', outline: 'none', fontFamily: 'sans-serif',
-                    padding: 0, minHeight: '40px'
+                    outline: 'none', fontFamily: 'sans-serif', padding: 0, minHeight: '40px'
                   }}
-                />
+/>
                 <button onClick={() => {
                   const ex = data.journal?.[selDate] || []
                   const ent = Array.isArray(ex) ? ex : [{ text: ex, ts: 0 }]
