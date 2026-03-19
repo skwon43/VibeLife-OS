@@ -394,11 +394,11 @@ export default function Knowledge({ data, saveData }) {
                 <button onClick={() => delConcept(ci)} style={{ width: '26px', height: '26px', borderRadius: '50%', border: '1px solid #E8E7F2', background: 'transparent', color: '#9999b3', fontSize: '15px', cursor: 'pointer' }}>×</button>
               </div>
               {/* 개념 내용 인라인 수정 */}
-              <textarea
+              <AutoTextarea
                 value={c.body || ''}
                 onChange={e => updateConcept(ci, 'body', e.target.value)}
                 placeholder="핵심 내용..."
-                style={{ width: '100%', fontSize: '13px', color: '#555572', lineHeight: '1.7', marginBottom: '8px', border: 'none', background: 'transparent', outline: 'none', resize: 'none', fontFamily: 'sans-serif', padding: 0 }}
+                style={{ width: '100%', fontSize: '13px', color: '#555572', lineHeight: '1.7', marginBottom: '8px', border: 'none', background: 'transparent', outline: 'none', fontFamily: 'sans-serif', padding: 0 }}
               />
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '11px', color: '#9999b3' }}>이해도</span>
