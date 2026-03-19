@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import AutoTextarea from '../lib/AutoTextarea'
+import AutoTextarea from '../../lib/AutoTextarea'
 
 const ICONS = ['📚','💻','🎨','💡','🏃','💰','🔬','🌍','🎵','🍳','✈️','📷','🧠','🎯','🔧','📊']
 

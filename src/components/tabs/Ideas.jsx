@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import AutoTextarea from '../lib/AutoTextarea'
+import AutoTextarea from '../../lib/AutoTextarea'
 
 const IDEA_TAGS = [
   { key: 'vibe', label: '💻 바이브코딩', color: '#7F77DD', bg: '#EEEDFE' },

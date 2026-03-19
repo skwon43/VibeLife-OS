@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import AutoTextarea from '../lib/AutoTextarea'
+import AutoTextarea from '../../lib/AutoTextarea'
 
 
 const STATUS_KR = { planned: '예정', ongoing: '진행 중', done: '완료' }
