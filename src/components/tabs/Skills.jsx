@@ -30,7 +30,6 @@ export default function Skills({ data, saveData }) {
   const skills = data.skills || []
   const vocab = data.vocab || []
 
-  // Skills 함수들
   function addSkill() {
     if (!skillInput.trim()) return
     saveData({ skills: [...skills, { name: skillInput, level: 1, cat: '기타' }] })
@@ -41,19 +40,12 @@ export default function Skills({ data, saveData }) {
     saveData({ skills: skills.filter((_, idx) => idx !== i) })
   }
 
-  function updateSkillLevel(i, level) {
+  function updateSkill(i, field, value) {
     const updated = [...skills]
-    updated[i].level = parseInt(level)
+    updated[i][field] = field === 'level' ? parseInt(value) : value
     saveData({ skills: updated })
   }
 
-  function updateSkillCat(i, cat) {
-    const updated = [...skills]
-    updated[i].cat = cat
-    saveData({ skills: updated })
-  }
-
-  // Vocab 함수들
   function addVocab() {
     if (!vocabForm.expr.trim()) return
     saveData({ vocab: [{ ...vocabForm, remembered: false, similar: '' }, ...vocab] })
@@ -62,6 +54,12 @@ export default function Skills({ data, saveData }) {
 
   function delVocab(i) {
     saveData({ vocab: vocab.filter((_, idx) => idx !== i) })
+  }
+
+  function updateVocab(i, field, value) {
+    const updated = [...vocab]
+    updated[i][field] = value
+    saveData({ vocab: updated })
   }
 
   function toggleRemembered(i) {
@@ -75,7 +73,7 @@ export default function Skills({ data, saveData }) {
 
   return (
     <div>
-      {/* 상단 뷰 전환 탭 */}
+      {/* 상단 뷰 전환 */}
       <div style={{ display: 'flex', gap: '8px', marginBottom: '1rem' }}>
         {[{ key: 'skills', label: 'Skills' }, { key: 'english', label: '🇺🇸 English' }].map(t => (
           <button key={t.key} onClick={() => setView(t.key)} style={{
@@ -90,7 +88,6 @@ export default function Skills({ data, saveData }) {
       {/* Skills 뷰 */}
       {view === 'skills' && (
         <div>
-          {/* 카테고리 필터 */}
           <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '1rem' }}>
             {SKILL_CATS.map(c => (
               <button key={c} onClick={() => setSkillCat(c)} style={{
@@ -102,8 +99,6 @@ export default function Skills({ data, saveData }) {
               }}>{c}</button>
             ))}
           </div>
-
-          {/* 스킬 추가 */}
           <div style={{ display: 'flex', gap: '8px', marginBottom: '1rem' }}>
             <input
               value={skillInput}
@@ -126,7 +121,16 @@ export default function Skills({ data, saveData }) {
               <div key={i} style={{ background: '#fff', borderRadius: '12px', border: '1px solid #E8E7F2', padding: '0.9rem 1rem', marginBottom: '0.65rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
                   <span style={{ fontSize: '20px' }}>{icon}</span>
-                  <span style={{ flex: 1, fontSize: '14px', fontWeight: '500', color: '#1a1a2e' }}>{s.name}</span>
+                  {/* 인라인 이름 수정 */}
+                  <input
+                    value={s.name}
+                    onChange={e => updateSkill(i, 'name', e.target.value)}
+                    style={{
+                      flex: 1, fontSize: '14px', fontWeight: '500', color: '#1a1a2e',
+                      border: 'none', background: 'transparent', outline: 'none',
+                      fontFamily: 'sans-serif', padding: 0
+                    }}
+                  />
                   <span style={{ fontSize: '13px', fontWeight: '600', color: '#7F77DD' }}>{s.level * 10}%</span>
                   <button onClick={() => delSkill(i)} style={{ width: '26px', height: '26px', borderRadius: '50%', border: '1px solid #E8E7F2', background: 'transparent', color: '#9999b3', fontSize: '15px', cursor: 'pointer' }}>×</button>
                 </div>
@@ -134,11 +138,11 @@ export default function Skills({ data, saveData }) {
                   <div style={{ height: '100%', width: `${s.level * 10}%`, background: 'linear-gradient(90deg, #7F77DD, #a89ff0)', borderRadius: '4px', transition: 'width 0.4s' }} />
                 </div>
                 <input type="range" min="0" max="10" step="1" value={s.level}
-                  onChange={e => updateSkillLevel(i, e.target.value)}
+                  onChange={e => updateSkill(i, 'level', e.target.value)}
                   style={{ width: '100%', accentColor: '#7F77DD', marginBottom: '6px', cursor: 'pointer' }}
                 />
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <select value={s.cat} onChange={e => updateSkillCat(i, e.target.value)}
+                  <select value={s.cat} onChange={e => updateSkill(i, 'cat', e.target.value)}
                     style={{ fontSize: '11px', border: '1px solid #E8E7F2', borderRadius: '6px', background: '#F7F6FB', padding: '2px 6px', color: '#555572', outline: 'none' }}>
                     {['언어', '프레임워크', '수학/이론', '자격증', '기타'].map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
@@ -153,7 +157,6 @@ export default function Skills({ data, saveData }) {
       {/* English 뷰 */}
       {view === 'english' && (
         <div>
-          {/* 카테고리 필터 */}
           <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '1rem' }}>
             {ENG_CATS.map(c => (
               <button key={c.key} onClick={() => setEngCat(c.key)} style={{
@@ -166,20 +169,18 @@ export default function Skills({ data, saveData }) {
             ))}
           </div>
 
-          {/* 표현 추가 폼 */}
           <div style={{ background: '#fff', borderRadius: '12px', border: '1px solid #E8E7F2', padding: '1rem', marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <input value={vocabForm.expr} onChange={e => setVocabForm(p => ({ ...p, expr: e.target.value }))}
-              placeholder='표현 (예: "loop you in")'
-              style={{ padding: '10px 14px', border: '1.5px solid #E8E7F2', borderRadius: '8px', fontSize: '14px', outline: 'none', background: '#F7F6FB' }}
-            />
-            <input value={vocabForm.example} onChange={e => setVocabForm(p => ({ ...p, example: e.target.value }))}
-              placeholder='예문 (예: "I wanted to loop you in on the update.")'
-              style={{ padding: '10px 14px', border: '1.5px solid #E8E7F2', borderRadius: '8px', fontSize: '14px', outline: 'none', background: '#F7F6FB' }}
-            />
-            <input value={vocabForm.nuance} onChange={e => setVocabForm(p => ({ ...p, nuance: e.target.value }))}
-              placeholder='뉘앙스 / 언제 쓰는지'
-              style={{ padding: '10px 14px', border: '1.5px solid #E8E7F2', borderRadius: '8px', fontSize: '14px', outline: 'none', background: '#F7F6FB' }}
-            />
+            {[
+              { field: 'expr', placeholder: '표현 (예: "loop you in")' },
+              { field: 'example', placeholder: '예문' },
+              { field: 'nuance', placeholder: '뉘앙스 / 언제 쓰는지' },
+            ].map(({ field, placeholder }) => (
+              <input key={field} value={vocabForm[field]}
+                onChange={e => setVocabForm(p => ({ ...p, [field]: e.target.value }))}
+                placeholder={placeholder}
+                style={{ padding: '10px 14px', border: '1.5px solid #E8E7F2', borderRadius: '8px', fontSize: '14px', outline: 'none', background: '#F7F6FB' }}
+              />
+            ))}
             <select value={vocabForm.cat} onChange={e => setVocabForm(p => ({ ...p, cat: e.target.value }))}
               style={{ padding: '10px 14px', border: '1.5px solid #E8E7F2', borderRadius: '8px', fontSize: '14px', background: '#F7F6FB', color: '#1a1a2e', outline: 'none' }}>
               {Object.entries(ENG_CAT_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
@@ -201,22 +202,31 @@ export default function Skills({ data, saveData }) {
             const cc = catColors[v.cat] || catColors.other
             return (
               <div key={i} style={{ background: '#fff', borderRadius: '12px', border: '1px solid #E8E7F2', padding: '0.9rem 1rem', marginBottom: '0.65rem' }}>
-                <div style={{ fontSize: '16px', fontWeight: '600', color: '#1a1a2e', marginBottom: '5px' }}>{v.expr}</div>
-                {v.example && (
-                  <div style={{ fontSize: '13px', color: '#555572', fontStyle: 'italic', lineHeight: '1.6', marginBottom: '6px', paddingLeft: '10px', borderLeft: '2px solid #D0CEEA' }}>
-                    "{v.example}"
-                  </div>
-                )}
-                {v.nuance && <div style={{ fontSize: '12px', color: '#9999b3', marginBottom: '8px' }}>💡 {v.nuance}</div>}
+                {/* 인라인 수정 */}
+                <input value={v.expr}
+                  onChange={e => updateVocab(i, 'expr', e.target.value)}
+                  style={{ width: '100%', fontSize: '16px', fontWeight: '600', color: '#1a1a2e', border: 'none', background: 'transparent', outline: 'none', fontFamily: 'sans-serif', padding: 0, marginBottom: '5px' }}
+                />
+                <input value={v.example || ''}
+                  onChange={e => updateVocab(i, 'example', e.target.value)}
+                  placeholder="예문..."
+                  style={{ width: '100%', fontSize: '13px', color: '#555572', border: 'none', background: 'transparent', outline: 'none', fontFamily: 'sans-serif', padding: '0 0 0 10px', marginBottom: '4px', borderLeft: '2px solid #D0CEEA', fontStyle: 'italic' }}
+                />
+                <input value={v.nuance || ''}
+                  onChange={e => updateVocab(i, 'nuance', e.target.value)}
+                  placeholder="뉘앙스..."
+                  style={{ width: '100%', fontSize: '12px', color: '#9999b3', border: 'none', background: 'transparent', outline: 'none', fontFamily: 'sans-serif', padding: 0, marginBottom: '8px' }}
+                />
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '11px', padding: '2px 9px', borderRadius: '10px', fontWeight: '500', background: cc.bg, color: cc.color }}>
-                      {ENG_CAT_LABELS[v.cat]}
-                    </span>
+                    <select value={v.cat} onChange={e => updateVocab(i, 'cat', e.target.value)}
+                      style={{ fontSize: '11px', padding: '2px 6px', border: '1px solid #E8E7F2', borderRadius: '6px', background: cc.bg, color: cc.color, outline: 'none' }}>
+                      {Object.entries(ENG_CAT_LABELS).map(([k, val]) => <option key={k} value={k}>{val}</option>)}
+                    </select>
                     <button onClick={() => toggleRemembered(i)} style={{
                       fontSize: '12px', border: 'none', background: 'none', cursor: 'pointer',
-                      color: v.remembered ? '#1D9E75' : '#9999b3', fontWeight: v.remembered ? '500' : '400',
-                      fontFamily: 'sans-serif', padding: 0
+                      color: v.remembered ? '#1D9E75' : '#9999b3',
+                      fontWeight: v.remembered ? '500' : '400', fontFamily: 'sans-serif', padding: 0
                     }}>
                       {v.remembered ? '✓ 외웠어' : '○ 외우는 중'}
                     </button>

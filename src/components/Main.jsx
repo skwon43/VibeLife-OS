@@ -8,6 +8,8 @@ import Ideas from './tabs/Ideas'
 import Skills from './tabs/Skills'
 import Career from './tabs/Career'
 import { ONBOARDING_DATA } from '../lib/defaultData'
+import { inject } from '@vercel/analytics'
+inject()
 
 const TABS = [
   { id: 'week', label: '주간', icon: '📅' },

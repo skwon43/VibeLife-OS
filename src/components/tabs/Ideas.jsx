@@ -25,17 +25,29 @@ export default function Ideas({ data, saveData }) {
 
   function saveIdea() {
     if (!text.trim()) return
-    const newIdeas = [
-      { text, tags: [...selTags], date: todayStr, ts: Date.now() },
-      ...ideas
-    ]
-    saveData({ ideas: newIdeas })
+    saveData({ ideas: [{ text, tags: [...selTags], date: todayStr, ts: Date.now() }, ...ideas] })
     setText('')
     setSelTags(new Set())
   }
 
   function delIdea(i) {
     saveData({ ideas: ideas.filter((_, idx) => idx !== i) })
+  }
+
+  function updateIdea(i, value) {
+    const updated = [...ideas]
+    updated[i].text = value
+    saveData({ ideas: updated })
+  }
+
+  function updateIdeaTag(i, key) {
+    const updated = [...ideas]
+    const tags = updated[i].tags || []
+    const idx = tags.indexOf(key)
+    if (idx >= 0) tags.splice(idx, 1)
+    else tags.push(key)
+    updated[i].tags = tags
+    saveData({ ideas: updated })
   }
 
   const filtered = filter === 'all'
@@ -51,12 +63,11 @@ export default function Ideas({ data, saveData }) {
         <textarea
           value={text}
           onChange={e => { setText(e.target.value); e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px' }}
-          placeholder="💡 지금 떠오른 아이디어 바로 적어봐&#10;바이브 코딩, 비즈니스, 피드백..."
+          placeholder="💡 지금 떠오른 아이디어 바로 적어봐"
           style={{
             width: '100%', border: 'none', background: 'transparent',
             fontSize: '15px', color: '#1a1a2e', outline: 'none',
-            resize: 'none', lineHeight: '1.7', fontFamily: 'sans-serif',
-            minHeight: '72px'
+            resize: 'none', lineHeight: '1.7', fontFamily: 'sans-serif', minHeight: '72px'
           }}
         />
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.6rem', paddingTop: '0.6rem', borderTop: '1px solid #E8E7F2', gap: '8px', flexWrap: 'wrap' }}>
@@ -88,35 +99,43 @@ export default function Ideas({ data, saveData }) {
         ))}
       </div>
 
-      {/* 아이디어 카드 */}
       {!ideas.length && (
         <p style={{ fontSize: '14px', color: '#9999b3', textAlign: 'center', padding: '2rem 0' }}>
           아이디어를 적어봐<br />
           <span style={{ fontSize: '12px' }}>떠오르는 순간 바로 캡처해</span>
         </p>
       )}
-      {!filtered.length && ideas.length > 0 && (
-        <p style={{ fontSize: '14px', color: '#9999b3', textAlign: 'center', padding: '2rem 0' }}>이 태그의 아이디어가 없어</p>
-      )}
+
       {filtered.map((idea, fi) => {
         const i = ideas.indexOf(idea)
         return (
           <div key={fi} style={{ background: '#fff', borderRadius: '12px', border: '1px solid #E8E7F2', padding: '0.85rem 1rem', marginBottom: '0.6rem' }}>
-            <p style={{ fontSize: '14px', color: '#1a1a2e', lineHeight: '1.7', marginBottom: '0.6rem', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-              {idea.text}
-            </p>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                {(idea.tags || []).length ? (idea.tags || []).map(tk => {
-                  const found = IDEA_TAGS.find(t => t.key === tk)
-                  return found ? (
-                    <span key={tk} style={{ fontSize: '11px', padding: '2px 9px', borderRadius: '10px', fontWeight: '500', background: found.bg, color: found.color }}>
-                      {found.label}
-                    </span>
-                  ) : null
-                }) : (
-                  <span style={{ fontSize: '11px', padding: '2px 9px', borderRadius: '10px', background: '#F7F6FB', color: '#9999b3' }}>태그 없음</span>
-                )}
+            {/* 인라인 텍스트 수정 */}
+            <textarea
+              value={idea.text}
+              onChange={e => updateIdea(i, e.target.value)}
+              style={{
+                width: '100%', border: 'none', background: 'transparent',
+                fontSize: '14px', color: '#1a1a2e', lineHeight: '1.7',
+                resize: 'none', outline: 'none', fontFamily: 'sans-serif',
+                padding: 0, marginBottom: '0.6rem', minHeight: '40px'
+              }}
+            />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px' }}>
+              {/* 태그 수정 */}
+              <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
+                {IDEA_TAGS.map(t => {
+                  const isOn = (idea.tags || []).includes(t.key)
+                  return (
+                    <button key={t.key} onClick={() => updateIdeaTag(i, t.key)} style={{
+                      padding: '2px 8px', borderRadius: '10px', fontSize: '11px', cursor: 'pointer',
+                      border: `1px solid ${isOn ? t.color : '#E8E7F2'}`,
+                      background: isOn ? t.bg : 'transparent',
+                      color: isOn ? t.color : '#9999b3',
+                      fontFamily: 'sans-serif', fontWeight: isOn ? '500' : '400'
+                    }}>{t.label}</button>
+                  )
+                })}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '11px', color: '#9999b3' }}>{idea.date}</span>

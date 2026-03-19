@@ -4,13 +4,11 @@ export default function Goals({ data, saveData }) {
   const [title, setTitle] = useState('')
   const [msInputs, setMsInputs] = useState({})
   const goals = data.goals || []
-
   const todayStr = new Date().toISOString().split('T')[0]
 
   function addGoal() {
     if (!title.trim()) return
-    const newGoals = [...goals, { title, pct: 0, milestones: [], _open: true }]
-    saveData({ goals: newGoals })
+    saveData({ goals: [...goals, { title, pct: 0, milestones: [], _open: true }] })
     setTitle('')
   }
 
@@ -21,6 +19,12 @@ export default function Goals({ data, saveData }) {
   function toggleGoal(i) {
     const updated = [...goals]
     updated[i]._open = !updated[i]._open
+    saveData({ goals: updated })
+  }
+
+  function updateGoalTitle(i, value) {
+    const updated = [...goals]
+    updated[i].title = value
     saveData({ goals: updated })
   }
 
@@ -41,6 +45,12 @@ export default function Goals({ data, saveData }) {
       updated[gi].milestones.filter(m => m.done).length /
       updated[gi].milestones.length * 100
     )
+    saveData({ goals: updated })
+  }
+
+  function updateMs(gi, mi, value) {
+    const updated = [...goals]
+    updated[gi].milestones[mi].text = value
     saveData({ goals: updated })
   }
 
@@ -85,23 +95,32 @@ export default function Goals({ data, saveData }) {
         <button onClick={addGoal} style={{ padding: '10px 18px', borderRadius: '8px', border: 'none', background: '#7F77DD', color: '#fff', fontSize: '14px', fontWeight: '500', cursor: 'pointer' }}>추가</button>
       </div>
 
-      {/* Goal 카드들 */}
       {!goals.length && <p style={{ fontSize: '14px', color: '#9999b3', textAlign: 'center', padding: '2rem 0' }}>목표를 추가해봐</p>}
+
       {goals.map((g, gi) => {
         const pct = g.milestones?.length
           ? Math.round(g.milestones.filter(m => m.done).length / g.milestones.length * 100)
           : g.pct || 0
         return (
           <div key={gi} style={{ background: '#fff', borderRadius: '12px', border: '1px solid #E8E7F2', marginBottom: '0.75rem', overflow: 'hidden' }}>
-            
+
             {/* 헤더 */}
-            <div onClick={() => toggleGoal(gi)} style={{ padding: '0.9rem 1rem', cursor: 'pointer' }}>
+            <div style={{ padding: '0.9rem 1rem', cursor: 'pointer' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <span style={{ fontSize: '15px', fontWeight: '500', color: '#1a1a2e' }}>{g.title}</span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {/* 인라인 제목 수정 */}
+                <input
+                  value={g.title}
+                  onChange={e => updateGoalTitle(gi, e.target.value)}
+                  style={{
+                    flex: 1, fontSize: '15px', fontWeight: '500', color: '#1a1a2e',
+                    border: 'none', background: 'transparent', outline: 'none',
+                    fontFamily: 'sans-serif', padding: 0, marginRight: '8px'
+                  }}
+                />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
                   <span style={{ fontSize: '13px', fontWeight: '600', color: '#7F77DD' }}>{pct}%</span>
-                  <button onClick={e => { e.stopPropagation(); delGoal(gi) }} style={{ width: '22px', height: '22px', borderRadius: '50%', border: '1px solid #E8E7F2', background: 'transparent', color: '#9999b3', fontSize: '13px', cursor: 'pointer' }}>×</button>
-                  <span style={{ fontSize: '12px', color: '#9999b3' }}>{g._open ? '▴' : '▾'}</span>
+                  <button onClick={() => delGoal(gi)} style={{ width: '22px', height: '22px', borderRadius: '50%', border: '1px solid #E8E7F2', background: 'transparent', color: '#9999b3', fontSize: '13px', cursor: 'pointer' }}>×</button>
+                  <span onClick={() => toggleGoal(gi)} style={{ fontSize: '12px', color: '#9999b3', cursor: 'pointer' }}>{g._open ? '▴' : '▾'}</span>
                 </div>
               </div>
               <div style={{ height: '5px', background: '#F7F6FB', borderRadius: '3px', overflow: 'hidden', border: '1px solid #E8E7F2' }}>
@@ -127,7 +146,17 @@ export default function Goals({ data, saveData }) {
                     }}>
                       {m.done && <span style={{ color: '#fff', fontSize: '10px' }}>✓</span>}
                     </div>
-                    <span style={{ flex: 1, fontSize: '13px', color: m.done ? '#9999b3' : '#1a1a2e', textDecoration: m.done ? 'line-through' : 'none' }}>{m.text}</span>
+                    {/* 인라인 milestone 수정 */}
+                    <input
+                      value={m.text}
+                      onChange={e => updateMs(gi, mi, e.target.value)}
+                      style={{
+                        flex: 1, fontSize: '13px', border: 'none', background: 'transparent',
+                        outline: 'none', fontFamily: 'sans-serif', padding: 0,
+                        color: m.done ? '#9999b3' : '#1a1a2e',
+                        textDecoration: m.done ? 'line-through' : 'none'
+                      }}
+                    />
                     {!m.done && (
                       <button onClick={() => sendToTask(gi, mi)} style={{ padding: '3px 9px', borderRadius: '20px', border: '1px solid #7F77DD', background: 'transparent', color: '#7F77DD', fontSize: '11px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
                         오늘 할 일로

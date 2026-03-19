@@ -6,28 +6,20 @@ export default function Knowledge({ data, saveData }) {
   const [selBinder, setSelBinder] = useState(null)
   const [selTab, setSelTab] = useState('links')
   const [showForm, setShowForm] = useState(false)
-  const [noteMode, setNoteMode] = useState(false) // 풀스크린 노트 모드
-  const [editingNote, setEditingNote] = useState(null) // 편집중인 노트 index
+  const [noteMode, setNoteMode] = useState(false)
+  const [editingNote, setEditingNote] = useState(null)
   const [binderName, setBinderName] = useState('')
   const [binderIcon, setBinderIcon] = useState(ICONS[0])
   const [binderType, setBinderType] = useState('general')
-
-  // 각 폼은 로컬 state로만 관리 (저장 버튼 눌러야 반영)
   const [linkForm, setLinkForm] = useState({ url: '', title: '', memo: '', tag: '', content: '' })
   const [noteForm, setNoteForm] = useState({ title: '', body: '' })
   const [conceptForm, setConceptForm] = useState({ title: '', body: '' })
 
   const binders = data.binders || []
 
-  // ── 바인더 CRUD ──────────────────────────────────────────
   function addBinder() {
     if (!binderName.trim()) return
-    saveData({
-      binders: [
-        ...binders,
-        { name: binderName, icon: binderIcon, type: binderType, links: [], notes: [], concepts: [] }
-      ]
-    })
+    saveData({ binders: [...binders, { name: binderName, icon: binderIcon, type: binderType, links: [], notes: [], concepts: [] }] })
     setBinderName(''); setBinderIcon(ICONS[0]); setBinderType('general'); setShowForm(false)
   }
 
@@ -37,14 +29,18 @@ export default function Knowledge({ data, saveData }) {
     setSelBinder(null)
   }
 
-  // ── 링크 CRUD ─────────────────────────────────────────────
+  // 바인더 이름 인라인 수정
+  function updateBinderName(i, value) {
+    const updated = [...binders]
+    updated[i].name = value
+    saveData({ binders: updated })
+  }
+
   function addLink() {
     if (!linkForm.url.trim()) return
     const url = linkForm.url.startsWith('http') ? linkForm.url : 'https://' + linkForm.url
     const updated = binders.map((b, i) =>
-      i === selBinder
-        ? { ...b, links: [{ ...linkForm, url, summary: '' }, ...(b.links || [])] }
-        : b
+      i === selBinder ? { ...b, links: [{ ...linkForm, url, summary: '' }, ...(b.links || [])] } : b
     )
     saveData({ binders: updated })
     setLinkForm({ url: '', title: '', memo: '', tag: '', content: '' })
@@ -52,14 +48,22 @@ export default function Knowledge({ data, saveData }) {
 
   function delLink(li) {
     const updated = binders.map((b, i) =>
-      i === selBinder
-        ? { ...b, links: b.links.filter((_, idx) => idx !== li) }
-        : b
+      i === selBinder ? { ...b, links: b.links.filter((_, idx) => idx !== li) } : b
     )
     saveData({ binders: updated })
   }
 
-  // ── 노트 CRUD ─────────────────────────────────────────────
+  // 링크 인라인 수정
+  function updateLink(li, field, value) {
+    const updated = binders.map((b, i) => {
+      if (i !== selBinder) return b
+      const links = [...b.links]
+      links[li] = { ...links[li], [field]: value }
+      return { ...b, links }
+    })
+    saveData({ binders: updated })
+  }
+
   function saveNote() {
     if (!noteForm.title.trim() && !noteForm.body.trim()) return
     const updated = binders.map((b, i) =>
@@ -75,12 +79,7 @@ export default function Knowledge({ data, saveData }) {
   function updateNote(ni) {
     const updated = binders.map((b, i) =>
       i === selBinder
-        ? {
-            ...b,
-            notes: b.notes.map((n, idx) =>
-              idx === ni ? { ...n, title: noteForm.title, body: noteForm.body } : n
-            )
-          }
+        ? { ...b, notes: b.notes.map((n, idx) => idx === ni ? { ...n, title: noteForm.title, body: noteForm.body } : n) }
         : b
     )
     saveData({ binders: updated })
@@ -91,9 +90,7 @@ export default function Knowledge({ data, saveData }) {
 
   function delNote(ni) {
     const updated = binders.map((b, i) =>
-      i === selBinder
-        ? { ...b, notes: b.notes.filter((_, idx) => idx !== ni) }
-        : b
+      i === selBinder ? { ...b, notes: b.notes.filter((_, idx) => idx !== ni) } : b
     )
     saveData({ binders: updated })
   }
@@ -105,7 +102,6 @@ export default function Knowledge({ data, saveData }) {
     setNoteMode(true)
   }
 
-  // ── 개념카드 CRUD ─────────────────────────────────────────
   function addConcept() {
     if (!conceptForm.title.trim()) return
     const updated = binders.map((b, i) =>
@@ -119,10 +115,19 @@ export default function Knowledge({ data, saveData }) {
 
   function delConcept(ci) {
     const updated = binders.map((b, i) =>
-      i === selBinder
-        ? { ...b, concepts: b.concepts.filter((_, idx) => idx !== ci) }
-        : b
+      i === selBinder ? { ...b, concepts: b.concepts.filter((_, idx) => idx !== ci) } : b
     )
+    saveData({ binders: updated })
+  }
+
+  // 개념카드 인라인 수정
+  function updateConcept(ci, field, value) {
+    const updated = binders.map((b, i) => {
+      if (i !== selBinder) return b
+      const concepts = [...b.concepts]
+      concepts[ci] = { ...concepts[ci], [field]: value }
+      return { ...b, concepts }
+    })
     saveData({ binders: updated })
   }
 
@@ -140,63 +145,26 @@ export default function Knowledge({ data, saveData }) {
     catch { return url }
   }
 
-  // ── 풀스크린 노트 에디터 ──────────────────────────────────
+  // 풀스크린 노트 에디터
   if (noteMode) {
     const isEditing = editingNote !== null
     return (
-      <div style={{
-        position: 'fixed', inset: 0, background: '#FAFAF9', zIndex: 100,
-        display: 'flex', flexDirection: 'column'
-      }}>
-        {/* 헤더 */}
-        <div style={{
-          padding: '14px 18px', display: 'flex', alignItems: 'center', gap: '12px',
-          borderBottom: '1px solid #E8E7F2', background: '#fff'
-        }}>
-          <button
-            onClick={() => { setNoteMode(false); setEditingNote(null); setNoteForm({ title: '', body: '' }) }}
-            style={{ padding: '6px 14px', borderRadius: '8px', border: '1.5px solid #E8E7F2', background: 'transparent', color: '#9999b3', fontSize: '13px', cursor: 'pointer' }}
-          >← 취소</button>
-          <span style={{ flex: 1, fontSize: '14px', fontWeight: '600', color: '#1a1a2e' }}>
-            {isEditing ? '노트 편집' : '새 노트'}
-          </span>
-          <button
-            onClick={() => isEditing ? updateNote(editingNote) : saveNote()}
-            style={{ padding: '6px 18px', borderRadius: '8px', border: 'none', background: '#7F77DD', color: '#fff', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}
-          >저장</button>
+      <div style={{ position: 'fixed', inset: 0, background: '#FAFAF9', zIndex: 100, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', gap: '12px', borderBottom: '1px solid #E8E7F2', background: '#fff' }}>
+          <button onClick={() => { setNoteMode(false); setEditingNote(null); setNoteForm({ title: '', body: '' }) }}
+            style={{ padding: '6px 14px', borderRadius: '8px', border: '1.5px solid #E8E7F2', background: 'transparent', color: '#9999b3', fontSize: '13px', cursor: 'pointer' }}>← 취소</button>
+          <span style={{ flex: 1, fontSize: '14px', fontWeight: '600', color: '#1a1a2e' }}>{isEditing ? '노트 편집' : '새 노트'}</span>
+          <button onClick={() => isEditing ? updateNote(editingNote) : saveNote()}
+            style={{ padding: '6px 18px', borderRadius: '8px', border: 'none', background: '#7F77DD', color: '#fff', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>저장</button>
         </div>
-
-        {/* 제목 */}
-        <input
-          value={noteForm.title}
-          onChange={e => setNoteForm(prev => ({ ...prev, title: e.target.value }))}
+        <input value={noteForm.title} onChange={e => setNoteForm(prev => ({ ...prev, title: e.target.value }))}
           placeholder="제목"
-          style={{
-            padding: '20px 22px 10px', fontSize: '22px', fontWeight: '700',
-            border: 'none', outline: 'none', background: 'transparent', color: '#1a1a2e',
-            fontFamily: 'sans-serif'
-          }}
+          style={{ padding: '20px 22px 10px', fontSize: '22px', fontWeight: '700', border: 'none', outline: 'none', background: 'transparent', color: '#1a1a2e', fontFamily: 'sans-serif' }}
         />
-
-        {/* 본문 */}
-        <textarea
-          value={noteForm.body}
-          onChange={e => setNoteForm(prev => ({ ...prev, body: e.target.value }))}
-          placeholder="여기에 자유롭게 메모하세요.
-
-• 코드 피드백 정리
-• 개념 요약
-• 아이디어
-• 참고자료 내용..."
-          autoFocus
-          style={{
-            flex: 1, padding: '10px 22px 22px', fontSize: '15px', lineHeight: '1.85',
-            border: 'none', outline: 'none', background: 'transparent', color: '#333355',
-            resize: 'none', fontFamily: 'sans-serif', overflowY: 'auto'
-          }}
+        <textarea value={noteForm.body} onChange={e => setNoteForm(prev => ({ ...prev, body: e.target.value }))}
+          placeholder="여기에 자유롭게 메모하세요..." autoFocus
+          style={{ flex: 1, padding: '10px 22px 22px', fontSize: '15px', lineHeight: '1.85', border: 'none', outline: 'none', background: 'transparent', color: '#333355', resize: 'none', fontFamily: 'sans-serif', overflowY: 'auto' }}
         />
-
-        {/* 하단 글자수 */}
         <div style={{ padding: '8px 22px', borderTop: '1px solid #E8E7F2', fontSize: '12px', color: '#c0c0d8', background: '#fff' }}>
           {noteForm.body.length}자
         </div>
@@ -204,16 +172,14 @@ export default function Knowledge({ data, saveData }) {
     )
   }
 
-  // ── 바인더 목록 ───────────────────────────────────────────
+  // 바인더 목록
   if (selBinder === null) return (
     <div>
       <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#1a1a2e', marginBottom: '1rem' }}>Knowledge</h2>
 
       {showForm && (
         <div style={{ background: '#fff', borderRadius: '12px', border: '1px solid #E8E7F2', padding: '1rem', marginBottom: '1rem' }}>
-          <input
-            value={binderName}
-            onChange={e => setBinderName(e.target.value)}
+          <input value={binderName} onChange={e => setBinderName(e.target.value)}
             placeholder="바인더 이름 (예: 투자, 자료구조, 운동...)"
             style={{ width: '100%', padding: '10px 14px', border: '1.5px solid #E8E7F2', borderRadius: '8px', fontSize: '14px', outline: 'none', marginBottom: '10px', boxSizing: 'border-box' }}
           />
@@ -255,7 +221,18 @@ export default function Knowledge({ data, saveData }) {
               color: '#9999b3', fontSize: '13px', cursor: 'pointer'
             }}>×</button>
             <div style={{ fontSize: '26px', marginBottom: '6px' }}>{b.icon}</div>
-            <div style={{ fontSize: '14px', fontWeight: '500', color: '#1a1a2e', marginBottom: '4px' }}>{b.name}</div>
+            {/* 바인더 이름 인라인 수정 */}
+            <input
+              value={b.name}
+              onChange={e => { e.stopPropagation(); updateBinderName(i, e.target.value) }}
+              onClick={e => e.stopPropagation()}
+              style={{
+                fontSize: '14px', fontWeight: '500', color: '#1a1a2e',
+                border: 'none', background: 'transparent', outline: 'none',
+                fontFamily: 'sans-serif', padding: 0, width: '100%', marginBottom: '4px',
+                cursor: 'text'
+              }}
+            />
             <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
               <span style={{ fontSize: '11px', color: '#9999b3' }}>{(b.links || []).length}링크</span>
               <span style={{ fontSize: '11px', color: '#9999b3' }}>·</span>
@@ -284,7 +261,6 @@ export default function Knowledge({ data, saveData }) {
   const isStudy = b.type === 'study'
   const tabs = ['links', 'notes', ...(isStudy ? ['concepts'] : [])]
 
-  // ── 바인더 상세 ───────────────────────────────────────────
   return (
     <div>
       <div onClick={() => setSelBinder(null)} style={{ fontSize: '14px', color: '#7F77DD', cursor: 'pointer', marginBottom: '0.75rem', fontWeight: '500' }}>
@@ -295,7 +271,6 @@ export default function Knowledge({ data, saveData }) {
         <span style={{ fontSize: '20px', fontWeight: '600', color: '#1a1a2e' }}>{b.name}</span>
       </div>
 
-      {/* 탭 */}
       <div style={{ display: 'flex', gap: '6px', marginBottom: '1rem' }}>
         {tabs.map(t => (
           <button key={t} onClick={() => setSelTab(t)} style={{
@@ -307,7 +282,7 @@ export default function Knowledge({ data, saveData }) {
         ))}
       </div>
 
-      {/* ── 링크 탭 ── */}
+      {/* 링크 탭 */}
       {selTab === 'links' && (
         <div>
           <div style={{ background: '#fff', borderRadius: '12px', border: '1px solid #E8E7F2', padding: '1rem', marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -317,11 +292,8 @@ export default function Knowledge({ data, saveData }) {
                 style={{ padding: '10px 14px', border: '1.5px solid #E8E7F2', borderRadius: '8px', fontSize: '14px', outline: 'none', background: '#F7F6FB' }}
               />
             ))}
-            <textarea
-              value={linkForm.content}
-              onChange={e => setLinkForm(prev => ({ ...prev, content: e.target.value }))}
-              placeholder="📋 내용 붙여넣기 (선택)&#10;유튜브 자막, 기사 본문 등"
-              rows={3}
+            <textarea value={linkForm.content} onChange={e => setLinkForm(prev => ({ ...prev, content: e.target.value }))}
+              placeholder="📋 내용 붙여넣기 (선택)" rows={3}
               style={{ padding: '10px 14px', border: '1.5px solid #E8E7F2', borderRadius: '8px', fontSize: '13px', outline: 'none', background: '#F7F6FB', resize: 'none', lineHeight: '1.6', fontFamily: 'sans-serif' }}
             />
             <button onClick={addLink} style={{ padding: '10px', borderRadius: '8px', border: 'none', background: '#7F77DD', color: '#fff', fontSize: '14px', fontWeight: '500', cursor: 'pointer' }}>저장</button>
@@ -335,12 +307,28 @@ export default function Knowledge({ data, saveData }) {
                   {getDomain(l.url)[0]?.toUpperCase() || '?'}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <a href={l.url} target="_blank" rel="noopener" style={{ fontSize: '14px', fontWeight: '500', color: '#7F77DD', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '3px', textDecoration: 'none' }}>
-                    {l.title || getDomain(l.url)}
-                  </a>
-                  <div style={{ fontSize: '12px', color: '#9999b3' }}>{getDomain(l.url)}</div>
-                  {l.memo && <div style={{ fontSize: '13px', color: '#555572', marginTop: '3px' }}>{l.memo}</div>}
-                  {l.tag && <span style={{ fontSize: '11px', padding: '2px 9px', borderRadius: '10px', background: '#EEEDFE', color: '#3C3489', marginTop: '5px', display: 'inline-block', fontWeight: '500' }}>{l.tag}</span>}
+                  {/* 링크 제목 인라인 수정 */}
+                  <input
+                    value={l.title || ''}
+                    onChange={e => updateLink(li, 'title', e.target.value)}
+                    placeholder={getDomain(l.url)}
+                    style={{ width: '100%', fontSize: '14px', fontWeight: '500', color: '#7F77DD', border: 'none', background: 'transparent', outline: 'none', fontFamily: 'sans-serif', padding: 0, marginBottom: '3px' }}
+                  />
+                  <div style={{ fontSize: '12px', color: '#9999b3', marginBottom: '3px' }}>{getDomain(l.url)}</div>
+                  {/* 메모 인라인 수정 */}
+                  <input
+                    value={l.memo || ''}
+                    onChange={e => updateLink(li, 'memo', e.target.value)}
+                    placeholder="메모 추가..."
+                    style={{ width: '100%', fontSize: '13px', color: '#555572', border: 'none', background: 'transparent', outline: 'none', fontFamily: 'sans-serif', padding: 0 }}
+                  />
+                  {/* 태그 인라인 수정 */}
+                  <input
+                    value={l.tag || ''}
+                    onChange={e => updateLink(li, 'tag', e.target.value)}
+                    placeholder="태그..."
+                    style={{ fontSize: '11px', color: '#3C3489', border: 'none', background: l.tag ? '#EEEDFE' : 'transparent', outline: 'none', fontFamily: 'sans-serif', padding: l.tag ? '2px 9px' : '0', borderRadius: '10px', marginTop: '4px' }}
+                  />
                 </div>
                 <button onClick={() => delLink(li)} style={{ width: '26px', height: '26px', borderRadius: '50%', border: '1px solid #E8E7F2', background: 'transparent', color: '#9999b3', fontSize: '15px', cursor: 'pointer', flexShrink: 0 }}>×</button>
               </div>
@@ -350,60 +338,31 @@ export default function Knowledge({ data, saveData }) {
         </div>
       )}
 
-      {/* ── 노트 탭 ── */}
+      {/* 노트 탭 */}
       {selTab === 'notes' && (
         <div>
-          {/* 새 노트 버튼 */}
-          <button
-            onClick={() => { setNoteForm({ title: '', body: '' }); setEditingNote(null); setNoteMode(true) }}
-            style={{
-              width: '100%', padding: '14px', borderRadius: '12px',
-              border: '1.5px dashed #D0CEEA', background: 'transparent',
-              color: '#7F77DD', fontSize: '14px', fontWeight: '500', cursor: 'pointer',
-              marginBottom: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
-            }}
-          >
+          <button onClick={() => { setNoteForm({ title: '', body: '' }); setEditingNote(null); setNoteMode(true) }}
+            style={{ width: '100%', padding: '14px', borderRadius: '12px', border: '1.5px dashed #D0CEEA', background: 'transparent', color: '#7F77DD', fontSize: '14px', fontWeight: '500', cursor: 'pointer', marginBottom: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
             ✏️ 새 노트 작성
           </button>
-
-          {!(b.notes || []).length && (
-            <p style={{ fontSize: '14px', color: '#9999b3', textAlign: 'center', padding: '1.5rem 0' }}>
-              노트를 추가해봐
-            </p>
-          )}
-
+          {!(b.notes || []).length && <p style={{ fontSize: '14px', color: '#9999b3', textAlign: 'center', padding: '1.5rem 0' }}>노트를 추가해봐</p>}
           {(b.notes || []).map((n, ni) => (
-            <div key={ni} onClick={() => openNoteEdit(ni)} style={{
-              background: '#fff', borderRadius: '12px', border: '1px solid #E8E7F2',
-              padding: '0.9rem 1rem', marginBottom: '0.65rem', cursor: 'pointer'
-            }}>
+            <div key={ni} onClick={() => openNoteEdit(ni)} style={{ background: '#fff', borderRadius: '12px', border: '1px solid #E8E7F2', padding: '0.9rem 1rem', marginBottom: '0.65rem', cursor: 'pointer' }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '14px', fontWeight: '600', color: '#1a1a2e', marginBottom: '4px' }}>
-                    {n.title || '(제목 없음)'}
-                  </div>
-                  {n.body && (
-                    <div style={{
-                      fontSize: '13px', color: '#9999b3', lineHeight: '1.6',
-                      overflow: 'hidden', display: '-webkit-box',
-                      WebkitLineClamp: 2, WebkitBoxOrient: 'vertical'
-                    }}>
-                      {n.body}
-                    </div>
-                  )}
+                  <div style={{ fontSize: '14px', fontWeight: '600', color: '#1a1a2e', marginBottom: '4px' }}>{n.title || '(제목 없음)'}</div>
+                  {n.body && <div style={{ fontSize: '13px', color: '#9999b3', lineHeight: '1.6', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{n.body}</div>}
                   <div style={{ fontSize: '11px', color: '#c0c0d8', marginTop: '6px' }}>{n.date}</div>
                 </div>
-                <button
-                  onClick={e => { e.stopPropagation(); delNote(ni) }}
-                  style={{ width: '26px', height: '26px', borderRadius: '50%', border: '1px solid #E8E7F2', background: 'transparent', color: '#9999b3', fontSize: '15px', cursor: 'pointer', flexShrink: 0 }}
-                >×</button>
+                <button onClick={e => { e.stopPropagation(); delNote(ni) }}
+                  style={{ width: '26px', height: '26px', borderRadius: '50%', border: '1px solid #E8E7F2', background: 'transparent', color: '#9999b3', fontSize: '15px', cursor: 'pointer', flexShrink: 0 }}>×</button>
               </div>
             </div>
           ))}
         </div>
       )}
 
-      {/* ── 개념카드 탭 ── */}
+      {/* 개념카드 탭 */}
       {selTab === 'concepts' && (
         <div>
           <div style={{ background: '#fff', borderRadius: '12px', border: '1px solid #E8E7F2', padding: '1rem', marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -412,8 +371,7 @@ export default function Knowledge({ data, saveData }) {
               style={{ padding: '10px 14px', border: '1.5px solid #E8E7F2', borderRadius: '8px', fontSize: '14px', outline: 'none', background: '#F7F6FB' }}
             />
             <textarea value={conceptForm.body} onChange={e => setConceptForm(prev => ({ ...prev, body: e.target.value }))}
-              placeholder="핵심 내용, 공식, 설명..."
-              rows={3}
+              placeholder="핵심 내용, 공식, 설명..." rows={3}
               style={{ padding: '10px 14px', border: '1.5px solid #E8E7F2', borderRadius: '8px', fontSize: '13px', outline: 'none', background: '#F7F6FB', resize: 'none', fontFamily: 'sans-serif' }}
             />
             <button onClick={addConcept} style={{ padding: '10px', borderRadius: '8px', border: 'none', background: '#7F77DD', color: '#fff', fontSize: '14px', fontWeight: '500', cursor: 'pointer' }}>추가</button>
@@ -423,10 +381,21 @@ export default function Knowledge({ data, saveData }) {
           {(b.concepts || []).map((c, ci) => (
             <div key={ci} style={{ background: '#fff', borderRadius: '12px', border: '1px solid #E8E7F2', padding: '0.9rem 1rem', marginBottom: '0.65rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                <span style={{ flex: 1, fontSize: '14px', fontWeight: '500', color: '#1a1a2e' }}>{c.title}</span>
+                {/* 개념 제목 인라인 수정 */}
+                <input
+                  value={c.title}
+                  onChange={e => updateConcept(ci, 'title', e.target.value)}
+                  style={{ flex: 1, fontSize: '14px', fontWeight: '500', color: '#1a1a2e', border: 'none', background: 'transparent', outline: 'none', fontFamily: 'sans-serif', padding: 0 }}
+                />
                 <button onClick={() => delConcept(ci)} style={{ width: '26px', height: '26px', borderRadius: '50%', border: '1px solid #E8E7F2', background: 'transparent', color: '#9999b3', fontSize: '15px', cursor: 'pointer' }}>×</button>
               </div>
-              {c.body && <p style={{ fontSize: '13px', color: '#555572', lineHeight: '1.7', marginBottom: '8px' }}>{c.body}</p>}
+              {/* 개념 내용 인라인 수정 */}
+              <textarea
+                value={c.body || ''}
+                onChange={e => updateConcept(ci, 'body', e.target.value)}
+                placeholder="핵심 내용..."
+                style={{ width: '100%', fontSize: '13px', color: '#555572', lineHeight: '1.7', marginBottom: '8px', border: 'none', background: 'transparent', outline: 'none', resize: 'none', fontFamily: 'sans-serif', padding: 0 }}
+              />
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '11px', color: '#9999b3' }}>이해도</span>
                 <div style={{ display: 'flex', gap: '4px' }}>

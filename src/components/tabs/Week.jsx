@@ -186,22 +186,35 @@ export default function Week({ data, saveData }) {
             </div>
           )}
           {tasks.length ? tasks.map((t, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '7px 0', borderBottom: i < tasks.length - 1 ? '1px solid #E8E7F2' : 'none' }}>
-              <div onClick={() => toggleTask(i)} style={{
-                width: '18px', height: '18px', borderRadius: '50%', flexShrink: 0, cursor: 'pointer',
-                border: t.done ? 'none' : '2px solid #D0CEEA',
-                background: t.done ? '#7F77DD' : 'transparent',
-                display: 'flex', alignItems: 'center', justifyContent: 'center'
-              }}>
-                {t.done && <span style={{ color: '#fff', fontSize: '10px' }}>✓</span>}
-              </div>
-              <span style={{ flex: 1, fontSize: '14px', color: t.done ? '#9999b3' : '#1a1a2e', textDecoration: t.done ? 'line-through' : 'none' }}>
-                {t.text}
-              </span>
-              {t.goal && <span style={{ fontSize: '10px', color: '#3C3489', background: '#EEEDFE', padding: '1px 7px', borderRadius: '10px' }}>{t.goal}</span>}
-              <button onClick={() => delTask(i)} style={{ fontSize: '15px', color: '#9999b3', border: 'none', background: 'none', cursor: 'pointer' }}>×</button>
-            </div>
-          )) : <p style={{ fontSize: '13px', color: '#9999b3', padding: '4px 0' }}>없음</p>}
+        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '7px 0', borderBottom: i < tasks.length - 1 ? '1px solid #E8E7F2' : 'none' }}>
+          <div onClick={() => toggleTask(i)} style={{
+            width: '18px', height: '18px', borderRadius: '50%', flexShrink: 0, cursor: 'pointer',
+            border: t.done ? 'none' : '2px solid #D0CEEA',
+            background: t.done ? '#7F77DD' : 'transparent',
+            display: 'flex', alignItems: 'center', justifyContent: 'center'
+          }}>
+            {t.done && <span style={{ color: '#fff', fontSize: '10px' }}>✓</span>}
+          </div>
+          {/* 인라인 수정 */}
+          <input
+            value={t.text}
+            onChange={e => {
+              const updated = [...tasks]
+              updated[i] = { ...updated[i], text: e.target.value }
+              saveData({ tasks: { ...data.tasks, [selDate]: updated } })
+            }}
+            style={{
+              flex: 1, fontSize: '14px', border: 'none', background: 'transparent',
+              outline: 'none', fontFamily: 'sans-serif', padding: 0,
+              color: t.done ? '#9999b3' : '#1a1a2e',
+              textDecoration: t.done ? 'line-through' : 'none',
+              cursor: 'text'
+            }}
+            />
+            {t.goal && <span style={{ fontSize: '10px', color: '#3C3489', background: '#EEEDFE', padding: '1px 7px', borderRadius: '10px' }}>{t.goal}</span>}
+            <button onClick={() => delTask(i)} style={{ fontSize: '15px', color: '#9999b3', border: 'none', background: 'none', cursor: 'pointer' }}>×</button>
+          </div>
+        )) : <p style={{ fontSize: '13px', color: '#9999b3', padding: '4px 0' }}>없음</p>}
         </div>
 
         {/* Habits */}
@@ -248,11 +261,24 @@ export default function Week({ data, saveData }) {
             return entries.map((entry, i) => (
               <div key={i} style={{
                 background: '#F7F6FB', borderRadius: '8px', padding: '10px 12px',
-                marginTop: '0.6rem', fontSize: '14px', color: '#1a1a2e',
-                lineHeight: '1.7', whiteSpace: 'pre-wrap', wordBreak: 'break-word',
-                border: '1px solid #E8E7F2', position: 'relative'
+                marginTop: '0.6rem', border: '1px solid #E8E7F2', position: 'relative'
               }}>
-                {entry.text}
+                <textarea
+                  value={entry.text}
+                  onChange={e => {
+                    const ex = data.journal?.[selDate] || []
+                    const ent = Array.isArray(ex) ? ex : [{ text: ex, ts: 0 }]
+                    const updated = [...ent]
+                    updated[i] = { ...updated[i], text: e.target.value }
+                    saveData({ journal: { ...data.journal, [selDate]: updated } })
+                  }}
+                  style={{
+                    width: '100%', border: 'none', background: 'transparent',
+                    fontSize: '14px', color: '#1a1a2e', lineHeight: '1.7',
+                    resize: 'none', outline: 'none', fontFamily: 'sans-serif',
+                    padding: 0, minHeight: '40px'
+                  }}
+                />
                 <button onClick={() => {
                   const ex = data.journal?.[selDate] || []
                   const ent = Array.isArray(ex) ? ex : [{ text: ex, ts: 0 }]
@@ -270,7 +296,6 @@ export default function Week({ data, saveData }) {
               </div>
             ))
           })()}
-
           {/* 입력창 */}
           <textarea
             value={journalInput}

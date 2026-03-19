@@ -13,29 +13,20 @@ export default function Habits({ data, saveData }) {
       String(d.getDate()).padStart(2, '0')
   }
 
- function getWeekDates() {
-  const s = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  s.setDate(s.getDate() - s.getDay())
-  return Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(s)
-    d.setDate(s.getDate() + i)
-    return d
-  })
-}
+  function getWeekDates() {
+    const base = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    base.setDate(base.getDate() - base.getDay())
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(base)
+      d.setDate(base.getDate() + i)
+      return d
+    })
+  }
 
-  // 이번 주 달성률 계산 (오늘까지만 기준)
   function weeklyPct(done = []) {
     const weekDates = getWeekDates()
-    const todayStr = toStr(now)
-
-    // 오늘까지 지난 날 수 (오늘 포함)
-    const passedDays = weekDates.filter(d => toStr(d) <= todayStr).length
-    if (passedDays === 0) return 0
-
-    // 이번 주에 체크한 날 수
-    const checkedDays = weekDates.filter(d => done.includes(toStr(d))).length
-
-    return Math.round((checkedDays / 7) * 100) // 7일 기준
+    const checked = weekDates.filter(d => done.includes(toStr(d))).length
+    return Math.round((checked / 7) * 100)
   }
 
   function addHabit() {
@@ -46,6 +37,12 @@ export default function Habits({ data, saveData }) {
 
   function delHabit(i) {
     saveData({ habits: habits.filter((_, idx) => idx !== i) })
+  }
+
+  function updateHabitName(i, value) {
+    const updated = [...habits]
+    updated[i].name = value
+    saveData({ habits: updated })
   }
 
   function toggleDay(hi, ds) {
@@ -84,20 +81,26 @@ export default function Habits({ data, saveData }) {
 
       {habits.map((h, hi) => {
         const pct = weeklyPct(h.done)
-        const checkedThisWeek = weekDates.filter(d => (h.done || []).includes(toStr(d))).length
-
-        // 퍼센트에 따라 색상 변화
-        const pctColor = pct >= 80 ? '#1D9E75' : pct >= 50 ? '#BA7517' : '#7F77DD'
+        const pctColor = pct >= 80 ? '#085041' : pct >= 50 ? '#633806' : '#3C3489'
         const pctBg = pct >= 80 ? '#E1F5EE' : pct >= 50 ? '#FAEEDA' : '#EEEDFE'
+        const checkedThisWeek = weekDates.filter(d => (h.done || []).includes(toStr(d))).length
 
         return (
           <div key={hi} style={{ background: '#fff', borderRadius: '12px', border: '1px solid #E8E7F2', padding: '0.9rem 1rem', marginBottom: '0.65rem' }}>
 
             {/* 헤더 */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-              <span style={{ fontSize: '15px', fontWeight: '500', color: '#1a1a2e' }}>{h.name}</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                {/* 주간 달성률 */}
+              {/* 인라인 이름 수정 */}
+              <input
+                value={h.name}
+                onChange={e => updateHabitName(hi, e.target.value)}
+                style={{
+                  flex: 1, fontSize: '15px', fontWeight: '500', color: '#1a1a2e',
+                  border: 'none', background: 'transparent', outline: 'none',
+                  fontFamily: 'sans-serif', padding: 0, marginRight: '8px'
+                }}
+              />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
                 <span style={{ fontSize: '11px', fontWeight: '500', padding: '3px 9px', borderRadius: '10px', background: pctBg, color: pctColor }}>
                   이번 주 {checkedThisWeek}/7 ({pct}%)
                 </span>
